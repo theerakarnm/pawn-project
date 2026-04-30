@@ -32,6 +32,18 @@ customersRoute.get('/', async (c) => {
   return c.json(result);
 });
 
+customersRoute.get('/by-line/:lineUserId', async (c) => {
+  const lineUserId = c.req.param('lineUserId');
+  const customer = await customerService.findByLineUserId(lineUserId);
+  if (!customer) return c.json({ error: 'Customer not found' }, 404);
+  return c.json({
+    installmentCode: customer.installmentCode,
+    remainingBalance: customer.remainingBalance,
+    dueDate: customer.dueDate,
+    status: customer.status,
+  });
+});
+
 customersRoute.get('/:id', async (c) => {
   const id = c.req.param('id');
   try {
