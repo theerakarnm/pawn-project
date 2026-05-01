@@ -17,6 +17,7 @@
     "drizzle-orm": "^0.39.0",
     "exceljs": "^4.4.0",
     "hono": "^4.6.0",
+    "pg": "^8.20.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
