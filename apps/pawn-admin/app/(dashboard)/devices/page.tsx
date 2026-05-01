@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getDevices, removeDevice } from '@/lib/api';
@@ -22,7 +22,7 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
-export default function DevicesPage() {
+function DevicesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') ?? '';
@@ -108,5 +108,13 @@ export default function DevicesPage() {
 
       {loaded && <DeviceTable devices={devices} onDelete={handleDelete} />}
     </div>
+  );
+}
+
+export default function DevicesPage() {
+  return (
+    <Suspense>
+      <DevicesContent />
+    </Suspense>
   );
 }
