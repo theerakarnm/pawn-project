@@ -1,6 +1,8 @@
 export type CustomerStatus = 'active' | 'paid' | 'overdue' | 'due_soon';
 export type PaymentStatus = 'pending_verification' | 'confirmed' | 'rejected';
 export type IdentityDocumentType = 'face' | 'id_card_front' | 'id_card_back' | 'other';
+export type PaymentMode = 'savings' | 'installment';
+export type PenaltyAction = 'none' | 'full' | 'waived' | 'reduced';
 
 export interface CustomerListItem {
   id: string;
@@ -10,6 +12,7 @@ export interface CustomerListItem {
   remainingBalance: string;
   status: CustomerStatus;
   dueDate: string | null;
+  paymentMode: PaymentMode;
 }
 
 export interface CustomerIdentityDocument {
@@ -34,6 +37,9 @@ export interface CustomerDetail extends CustomerListItem {
   notes: string;
   identityDocuments: CustomerIdentityDocument[];
   payments: PaymentItem[];
+  penaltyAction: PenaltyAction;
+  penaltyReducedAmount: number | null;
+  devicePickedUp: boolean;
 }
 
 export interface PaymentItem {
@@ -127,4 +133,67 @@ export interface DeviceListItem {
 
 export interface DeviceDetail extends DeviceListItem {
   updatedAt: string;
+}
+
+export interface DueCustomerItem {
+  id: string;
+  installmentCode: string;
+  name: string;
+  phone: string;
+  dueDate: string;
+  monthlyPayment: string;
+  paymentMode: PaymentMode;
+  remainingBalance: string;
+}
+
+export interface OverdueCustomerItem {
+  id: string;
+  installmentCode: string;
+  name: string;
+  phone: string;
+  dueDate: string;
+  overdueDays: number;
+  monthlyPayment: string;
+  paymentMode: PaymentMode;
+  remainingBalance: string;
+}
+
+export interface PenaltyCustomerItem {
+  id: string;
+  installmentCode: string;
+  name: string;
+  phone: string;
+  dueDate: string;
+  overdueDays: number;
+  penaltyAmount: number;
+  penaltyAction: PenaltyAction;
+  penaltyReducedAmount: number | null;
+  paymentMode: PaymentMode;
+}
+
+export interface InactiveSavingsItem {
+  id: string;
+  installmentCode: string;
+  name: string;
+  phone: string;
+  lastPaymentDate: string | null;
+  inactiveDays: number;
+  remainingBalance: string;
+}
+
+export interface RevenueSummary {
+  today: { count: number; total: string };
+  thisMonth: { count: number; total: string };
+  lastMonth: { count: number; total: string };
+  dailyBreakdown: Array<{ date: string; count: number; total: string }>;
+}
+
+export interface ReadyForPickupItem {
+  id: string;
+  installmentCode: string;
+  name: string;
+  phone: string;
+  deviceModel: string;
+  paidDate: string | null;
+  devicePickedUp: boolean;
 }

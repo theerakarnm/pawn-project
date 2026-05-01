@@ -17,13 +17,6 @@ export default async function CustomersPage({ searchParams }: PageProps) {
     page,
   });
 
-  const statusCounts: Record<string, number> = {};
-  const allForCounts = await getCustomers({});
-  const allCustomers = allForCounts.customers;
-  for (const c of allCustomers) {
-    statusCounts[c.status] = (statusCounts[c.status] ?? 0) + 1;
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -43,7 +36,6 @@ export default async function CustomersPage({ searchParams }: PageProps) {
       <CustomerFilters
         currentSearch={params.search}
         currentStatus={params.status}
-        statusCounts={statusCounts}
       />
 
       <CustomerTable customers={customers} />

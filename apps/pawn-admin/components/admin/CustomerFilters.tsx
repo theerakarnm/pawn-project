@@ -14,7 +14,6 @@ import { Search } from 'lucide-react';
 interface CustomerFiltersProps {
   currentSearch?: string;
   currentStatus?: string;
-  statusCounts: Record<string, number>;
 }
 
 const statusOptions = [
@@ -25,7 +24,13 @@ const statusOptions = [
   { value: 'paid', label: 'Paid' },
 ];
 
-export function CustomerFilters({ currentSearch, currentStatus, statusCounts }: CustomerFiltersProps) {
+const modeOptions = [
+  { value: 'all', label: 'All Modes' },
+  { value: 'savings', label: 'ออมมือถือ' },
+  { value: 'installment', label: 'ผ่อนเป็นงวด' },
+];
+
+export function CustomerFilters({ currentSearch, currentStatus }: CustomerFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -65,7 +70,21 @@ export function CustomerFilters({ currentSearch, currentStatus, statusCounts }: 
           {statusOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
-              {statusCounts[opt.value] !== undefined ? ` (${statusCounts[opt.value]})` : ''}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={searchParams.get('mode') ?? 'all'}
+        onValueChange={(v) => updateFilter('mode', v)}
+      >
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {modeOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
             </SelectItem>
           ))}
         </SelectContent>

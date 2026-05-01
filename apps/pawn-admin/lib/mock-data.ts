@@ -6,11 +6,19 @@ import type {
   DeviceDetail,
   DeviceListItem,
   DeviceStatus,
+  DueCustomerItem,
   IdentityDocumentType,
+  InactiveSavingsItem,
   MonthlyReport,
+  OverdueCustomerItem,
   PaymentItem,
+  PaymentMode,
   PaymentQueueItem,
   PaymentStatus,
+  PenaltyAction,
+  PenaltyCustomerItem,
+  ReadyForPickupItem,
+  RevenueSummary,
   ShopSettings,
   StaffMember,
 } from '@/types/api';
@@ -171,6 +179,7 @@ interface MockCustomerSeed {
   totalInstallments: number;
   paidInstallments: number;
   dueDate: string | null;
+  paymentMode: PaymentMode;
   deviceModel: string;
   lineDisplayName: string | null;
   linePictureUrl: string | null;
@@ -212,6 +221,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'สมชาย สุขใจ',
     phone: '081-234-5678',
     status: 'active',
+    paymentMode: 'installment',
     totalPrice: 25900,
     downPayment: 5000,
     monthlyPayment: 3490,
@@ -241,6 +251,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'สมหญิง มาลี',
     phone: '082-345-6789',
     status: 'overdue',
+    paymentMode: 'installment',
     totalPrice: 18900,
     downPayment: 3000,
     monthlyPayment: 2650,
@@ -270,6 +281,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'พิชัย รุ่งเรือง',
     phone: '083-456-7890',
     status: 'due_soon',
+    paymentMode: 'installment',
     totalPrice: 32900,
     downPayment: 6000,
     monthlyPayment: 4482,
@@ -300,6 +312,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'วิภาดา สว่าง',
     phone: '084-567-8901',
     status: 'paid',
+    paymentMode: 'installment',
     totalPrice: 15900,
     downPayment: 3000,
     monthlyPayment: 2580,
@@ -330,6 +343,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'ธนกร ศรีทอง',
     phone: '085-678-9012',
     status: 'active',
+    paymentMode: 'savings',
     totalPrice: 22900,
     downPayment: 4000,
     monthlyPayment: 3150,
@@ -355,6 +369,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'นภัสสร แสงจันทร์',
     phone: '086-789-0123',
     status: 'overdue',
+    paymentMode: 'installment',
     totalPrice: 45900,
     downPayment: 10000,
     monthlyPayment: 5980,
@@ -383,6 +398,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'อดิศร วงศ์เจริญ',
     phone: '087-890-1234',
     status: 'active',
+    paymentMode: 'savings',
     totalPrice: 19900,
     downPayment: 3500,
     monthlyPayment: 2733,
@@ -411,6 +427,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'จิราภรณ์ แสงดาว',
     phone: '088-901-2345',
     status: 'due_soon',
+    paymentMode: 'installment',
     totalPrice: 28900,
     downPayment: 5000,
     monthlyPayment: 3983,
@@ -439,6 +456,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'กิตติพงศ์ รักไทย',
     phone: '089-012-3456',
     status: 'active',
+    paymentMode: 'savings',
     totalPrice: 12900,
     downPayment: 2000,
     monthlyPayment: 1817,
@@ -461,6 +479,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'ประภาส ชัยพฤกษ์',
     phone: '080-123-4567',
     status: 'active',
+    paymentMode: 'installment',
     totalPrice: 37900,
     downPayment: 8000,
     monthlyPayment: 4983,
@@ -489,6 +508,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'มนัสนันท์ บุญมา',
     phone: '091-234-5678',
     status: 'overdue',
+    paymentMode: 'savings',
     totalPrice: 16900,
     downPayment: 2500,
     monthlyPayment: 2400,
@@ -513,6 +533,7 @@ const SEEDS: MockCustomerSeed[] = [
     name: 'เกรียงศักดิ์ พลเมือง',
     phone: '092-345-6789',
     status: 'paid',
+    paymentMode: 'installment',
     totalPrice: 21900,
     downPayment: 4000,
     monthlyPayment: 2983,
@@ -568,11 +589,177 @@ function buildIdentityDocuments(
   }));
 }
 
+const penaltyStates: Record<string, PenaltyAction> = {};
+const penaltyReducedAmounts: Record<string, number | null> = {};
+const pickupStates: Record<string, boolean> = {};
+
+export function setMockPenaltyAction(customerId: string, action: PenaltyAction, reducedAmount?: number): void {
+  penaltyStates[customerId] = action;
+  penaltyReducedAmounts[customerId] = reducedAmount ?? null;
+}
+
+export function setMockDevicePickedUp(customerId: string, pickedUp: boolean): void {
+  pickupStates[customerId] = pickedUp;
+}
+
+export function getMockDueCustomers(): DueCustomerItem[] {
+  const todayStr = now.toISOString().split('T')[0];
+  return SEEDS
+    .filter((s) => s.dueDate === todayStr && s.status !== 'paid')
+    .map((s) => {
+      const paid = s.payments.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + p.amount, 0);
+      const remaining = Math.max(0, s.totalPrice - s.downPayment - paid);
+      return {
+        id: s.id,
+        installmentCode: s.installmentCode,
+        name: s.name,
+        phone: s.phone,
+        dueDate: s.dueDate!,
+        monthlyPayment: fmt(s.monthlyPayment),
+        paymentMode: s.paymentMode,
+        remainingBalance: fmt(remaining),
+      };
+    });
+}
+
+export function getMockOverdueCustomers(): OverdueCustomerItem[] {
+  return SEEDS
+    .filter((s) => s.dueDate && s.status === 'overdue')
+    .map((s) => {
+      const paid = s.payments.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + p.amount, 0);
+      const remaining = Math.max(0, s.totalPrice - s.downPayment - paid);
+      const overdueDays = Math.ceil((now.getTime() - new Date(s.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        id: s.id,
+        installmentCode: s.installmentCode,
+        name: s.name,
+        phone: s.phone,
+        dueDate: s.dueDate!,
+        overdueDays,
+        monthlyPayment: fmt(s.monthlyPayment),
+        paymentMode: s.paymentMode,
+        remainingBalance: fmt(remaining),
+      };
+    });
+}
+
+export function getMockPenaltyCustomers(): PenaltyCustomerItem[] {
+  return SEEDS
+    .filter((s) => s.dueDate && s.status === 'overdue')
+    .map((s) => {
+      const overdueDays = Math.ceil((now.getTime() - new Date(s.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
+      const penaltyAmount = overdueDays * 100;
+      const action = penaltyStates[s.id] ?? 'none';
+      return {
+        id: s.id,
+        installmentCode: s.installmentCode,
+        name: s.name,
+        phone: s.phone,
+        dueDate: s.dueDate!,
+        overdueDays,
+        penaltyAmount,
+        penaltyAction: action,
+        penaltyReducedAmount: penaltyReducedAmounts[s.id] ?? null,
+        paymentMode: s.paymentMode,
+      };
+    });
+}
+
+export function getMockInactiveSavingsCustomers(thresholdDays = 30): InactiveSavingsItem[] {
+  return SEEDS
+    .filter((s) => s.paymentMode === 'savings' && s.status !== 'paid')
+    .map((s) => {
+      const confirmedPayments = s.payments.filter((p) => p.status === 'confirmed');
+      const lastPaymentDate = confirmedPayments.length > 0
+        ? confirmedPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt
+        : null;
+      const inactiveDays = lastPaymentDate
+        ? Math.ceil((now.getTime() - new Date(lastPaymentDate).getTime()) / (1000 * 60 * 60 * 24))
+        : Math.ceil((now.getTime() - new Date(s.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+      const paid = confirmedPayments.reduce((sum, p) => sum + p.amount, 0);
+      const remaining = Math.max(0, s.totalPrice - s.downPayment - paid);
+      return {
+        id: s.id,
+        installmentCode: s.installmentCode,
+        name: s.name,
+        phone: s.phone,
+        lastPaymentDate,
+        inactiveDays,
+        remainingBalance: fmt(remaining),
+      };
+    })
+    .filter((item) => item.inactiveDays >= thresholdDays);
+}
+
+export function getMockRevenueSummary(): RevenueSummary {
+  const customers = getMockCustomers();
+  const allPayments = customers.flatMap((c) => c.payments);
+  const confirmed = allPayments.filter((p) => p.status === 'confirmed');
+
+  const todayStr = now.toISOString().split('T')[0];
+  const todayPayments = confirmed.filter((p) => p.createdAt.startsWith(todayStr));
+  const todayTotal = todayPayments.reduce((sum, p) => sum + Number(p.amount.replace(/,/g, '')), 0);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const thisMonthPayments = confirmed.filter((p) => p.createdAt >= monthStart);
+  const thisMonthTotal = thisMonthPayments.reduce((sum, p) => sum + Number(p.amount.replace(/,/g, '')), 0);
+
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthStart = lastMonthDate.toISOString().split('T')[0];
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const lastMonthPayments = confirmed.filter((p) => p.createdAt >= lastMonthStart && p.createdAt < lastMonthEnd);
+  const lastMonthTotal = lastMonthPayments.reduce((sum, p) => sum + Number(p.amount.replace(/,/g, '')), 0);
+
+  const dailyBreakdown: Array<{ date: string; count: number; total: string }> = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dayPayments = confirmed.filter((p) => p.createdAt.startsWith(dateStr));
+    const dayTotal = dayPayments.reduce((sum, p) => sum + Number(p.amount.replace(/,/g, '')), 0);
+    if (dayPayments.length > 0) {
+      dailyBreakdown.push({ date: dateStr, count: dayPayments.length, total: fmt(dayTotal) });
+    }
+  }
+
+  return {
+    today: { count: todayPayments.length, total: fmt(todayTotal) },
+    thisMonth: { count: thisMonthPayments.length, total: fmt(thisMonthTotal) },
+    lastMonth: { count: lastMonthPayments.length, total: fmt(lastMonthTotal) },
+    dailyBreakdown,
+  };
+}
+
+export function getMockReadyForPickupCustomers(): ReadyForPickupItem[] {
+  return SEEDS
+    .filter((s) => {
+      const paid = s.payments.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + p.amount, 0);
+      const remaining = s.totalPrice - s.downPayment - paid;
+      return remaining <= 0;
+    })
+    .map((s) => {
+      const confirmedPayments = s.payments.filter((p) => p.status === 'confirmed');
+      const lastPayment = confirmedPayments.sort((a, b) => new Date(b.confirmedAt ?? b.createdAt).getTime() - new Date(a.confirmedAt ?? a.createdAt).getTime())[0];
+      return {
+        id: s.id,
+        installmentCode: s.installmentCode,
+        name: s.name,
+        phone: s.phone,
+        deviceModel: s.deviceModel,
+        paidDate: lastPayment?.confirmedAt ?? lastPayment?.createdAt ?? null,
+        devicePickedUp: pickupStates[s.id] ?? (s.status === 'paid'),
+      };
+    });
+}
+
 export function getMockCustomers(): CustomerDetail[] {
   return SEEDS.map((s, sIdx) => {
     const paid = s.payments.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + p.amount, 0);
     const remaining = Math.max(0, s.totalPrice - s.downPayment - paid);
     const paidInstallments = s.payments.filter((p) => p.status === 'confirmed').length - 1;
+    const overdueDays = s.dueDate && s.status === 'overdue'
+      ? Math.ceil((now.getTime() - new Date(s.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
     return {
       id: s.id,
       installmentCode: s.installmentCode,
@@ -586,6 +773,7 @@ export function getMockCustomers(): CustomerDetail[] {
       paidInstallments: Math.max(0, paidInstallments),
       remainingBalance: fmt(remaining),
       dueDate: s.dueDate,
+      paymentMode: s.paymentMode,
       lineUserId: s.lineDisplayName ? `line-${s.id}` : null,
       lineDisplayName: s.lineDisplayName,
       linePictureUrl: s.linePictureUrl,
@@ -594,6 +782,9 @@ export function getMockCustomers(): CustomerDetail[] {
       createdAt: s.createdAt,
       identityDocuments: buildIdentityDocuments(s.identityDocuments, s.id),
       payments: buildPayments(s.payments, s.name, sIdx),
+      penaltyAction: penaltyStates[s.id] ?? (overdueDays > 0 ? 'none' : 'none'),
+      penaltyReducedAmount: penaltyReducedAmounts[s.id] ?? null,
+      devicePickedUp: pickupStates[s.id] ?? (s.status === 'paid'),
     };
   });
 }
@@ -757,7 +948,7 @@ const DEVICE_SEEDS: MockDeviceSeed[] = [
   { id: 'dev-014', brand: 'realme', model: '12', storage: '128GB', price: 7990, status: 'active', createdAt: '2025-01-10T10:00:00.000Z', updatedAt: '2025-01-10T10:00:00.000Z' },
 ];
 
-let deviceMutations: MockDeviceSeed[] = [];
+const deviceMutations: MockDeviceSeed[] = [];
 
 function getDevicePool(): MockDeviceSeed[] {
   return [...DEVICE_SEEDS, ...deviceMutations];

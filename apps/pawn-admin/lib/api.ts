@@ -5,8 +5,15 @@ import type {
   DeviceDetail,
   DeviceListItem,
   DeviceStatus,
+  DueCustomerItem,
+  InactiveSavingsItem,
   MonthlyReport,
+  OverdueCustomerItem,
   PaymentQueueItem,
+  PenaltyAction,
+  PenaltyCustomerItem,
+  ReadyForPickupItem,
+  RevenueSummary,
   ShopSettings,
   StaffMember,
 } from '@/types/api';
@@ -26,6 +33,14 @@ import {
   createMockDevice,
   updateMockDevice,
   deleteMockDevice,
+  getMockDueCustomers,
+  getMockOverdueCustomers,
+  getMockPenaltyCustomers,
+  getMockInactiveSavingsCustomers,
+  getMockRevenueSummary,
+  getMockReadyForPickupCustomers,
+  setMockPenaltyAction,
+  setMockDevicePickedUp,
 } from '@/lib/mock-data';
 
 export async function getDashboard(): Promise<DashboardStats> {
@@ -65,6 +80,7 @@ export async function getCustomers(params?: {
     remainingBalance: c.remainingBalance,
     status: c.status,
     dueDate: c.dueDate,
+    paymentMode: c.paymentMode,
   }));
 
   return { customers, total: filtered.length };
@@ -149,6 +165,7 @@ export async function createCustomer(data: {
     remainingBalance: remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     status: 'active',
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    paymentMode: 'installment',
     lineUserId: null,
     lineDisplayName: null,
     linePictureUrl: null,
@@ -157,10 +174,45 @@ export async function createCustomer(data: {
     notes: '',
     identityDocuments: [],
     payments: [],
+    penaltyAction: 'none',
+    penaltyReducedAmount: null,
+    devicePickedUp: false,
   };
 
   console.log('[MOCK] Created customer', newCustomer.id, newCustomer.name);
   return newCustomer;
+}
+
+export async function getDueCustomers(): Promise<DueCustomerItem[]> {
+  return getMockDueCustomers();
+}
+
+export async function getOverdueCustomers(): Promise<OverdueCustomerItem[]> {
+  return getMockOverdueCustomers();
+}
+
+export async function getPenaltyCustomers(): Promise<PenaltyCustomerItem[]> {
+  return getMockPenaltyCustomers();
+}
+
+export async function getInactiveSavingsCustomers(thresholdDays = 30): Promise<InactiveSavingsItem[]> {
+  return getMockInactiveSavingsCustomers(thresholdDays);
+}
+
+export async function getRevenueSummary(): Promise<RevenueSummary> {
+  return getMockRevenueSummary();
+}
+
+export async function getReadyForPickupCustomers(): Promise<ReadyForPickupItem[]> {
+  return getMockReadyForPickupCustomers();
+}
+
+export function applyPenaltyAction(customerId: string, action: PenaltyAction, reducedAmount?: number): void {
+  setMockPenaltyAction(customerId, action, reducedAmount);
+}
+
+export function markDevicePickedUp(customerId: string, pickedUp: boolean): void {
+  setMockDevicePickedUp(customerId, pickedUp);
 }
 
 export async function getDevices(params?: {
