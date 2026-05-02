@@ -6,16 +6,18 @@ import { paymentsRoute } from './routes/payments.ts';
 import { webhookRoute } from './routes/webhook.ts';
 import { dashboardRoute } from './routes/dashboard.ts';
 import { reportsRoute } from './routes/reports.ts';
+import { liffRoute } from './routes/liff.ts';
 
 const app = new Hono();
 
 app.use('*', logger());
-app.use('/api/*', cors({ origin: '*' }));
+app.use('/api/*', cors({ origin: '*', allowHeaders: ['Content-Type', 'Authorization'] }));
 
 app.route('/api/customers', customersRoute);
 app.route('/api/payments', paymentsRoute);
 app.route('/api/dashboard', dashboardRoute);
 app.route('/api/reports', reportsRoute);
+app.route('/api/liff', liffRoute);
 app.route('/', webhookRoute);
 
 app.onError((err, c) => {

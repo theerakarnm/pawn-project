@@ -4,12 +4,14 @@ import liff from '@line/liff';
 interface UseLiffReturn {
   liffReady: boolean;
   lineUserId: string | null;
+  idToken: string | null;
   error: string | null;
 }
 
 export function useLiff(): UseLiffReturn {
   const [liffReady, setLiffReady] = useState(false);
   const [lineUserId, setLineUserId] = useState<string | null>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,6 +30,8 @@ export function useLiff(): UseLiffReturn {
         }
         return liff.getProfile().then((profile) => {
           setLineUserId(profile.userId);
+          const token = liff.getIDToken();
+          if (token) setIdToken(token);
           setLiffReady(true);
         });
       })
@@ -36,5 +40,5 @@ export function useLiff(): UseLiffReturn {
       });
   }, []);
 
-  return { liffReady, lineUserId, error };
+  return { liffReady, lineUserId, idToken, error };
 }

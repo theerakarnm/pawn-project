@@ -1,6 +1,7 @@
 import { db } from '../db/index.ts';
-import { customers, payments } from '../db/schema.ts';
+import { customers, payments, lineUserProfiles } from '../db/schema.ts';
 import { ilike, or, eq, and, sql } from 'drizzle-orm';
+import { normalizePhone } from './liff.service.ts';
 
 export interface CustomerListItem {
   id: string;
@@ -149,6 +150,23 @@ export async function createCustomer(data: {
   const remainingBalance = String(
     Number(data.totalPrice) - Number(data.downPayment),
   );
+  const phoneNormalized = normalizePhone(data.phone);
+
+  let lineUserId: string | undefined;
+
+  const pendingProfile = await db
+    .select()
+    .from(lineUserProfiles)
+    .where(eq(lineUserProfiles.phoneNormalized, phoneNormalized))
+    .then((r) => r.at(0) ?? null);
+
+  if (pendingProfile) {
+    lineUserId = pendingProfile.lineUserId;
+    await db
+      .update(lineUserProfiles)
+      .set({ status: 'linked', name: data.name, updatedAt: new Date() })
+      .where(eq(lineUserProfiles.lineUserId, pendingProfile.lineUserId));
+  }
 
   const result = await db
     .insert(customers)
@@ -156,12 +174,14 @@ export async function createCustomer(data: {
       installmentCode: data.installmentCode,
       name: data.name,
       phone: data.phone,
+      phoneNormalized,
       totalPrice: data.totalPrice,
       downPayment: data.downPayment,
       monthlyPayment: data.monthlyPayment,
       totalInstallments: data.totalInstallments,
       dueDate: data.dueDate,
       remainingBalance,
+      lineUserId: lineUserId ?? undefined,
     })
     .returning();
 
@@ -180,9 +200,14 @@ export async function updateCustomer(
     status?: 'active' | 'paid' | 'overdue' | 'due_soon';
   },
 ) {
+  const updates: Record<string, unknown> = { ...data, updatedAt: new Date() };
+  if (data.phone) {
+    updates.phoneNormalized = normalizePhone(data.phone);
+  }
+
   const result = await db
     .update(customers)
-    .set({ ...data, updatedAt: new Date() })
+    .set(updates)
     .where(eq(customers.id, id))
     .returning();
 
@@ -210,4 +235,11 @@ export async function findByLineUserId(lineUserId: string) {
     .where(eq(customers.lineUserId, lineUserId));
 
   return result.at(0) ?? null;
+}
+
+export async function findAllByLineUserId(lineUserId: string) {
+  return db
+    .select()
+    .from(customers)
+    .where(eq(customers.lineUserId, lineUserId));
 }

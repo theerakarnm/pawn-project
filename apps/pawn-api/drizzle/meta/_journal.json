@@ -8,6 +8,13 @@
       "when": 1777598490545,
       "tag": "0000_glamorous_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777758679827,
+      "tag": "0001_naive_banshee",
+      "breakpoints": true
     }
   ]
 }

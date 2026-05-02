@@ -11,4 +11,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // ❗ เพิ่ม Host ให้รองรับการเชื่อมต่อจาก LINE Proxy
+    host: true,
+
+    // (Optional) ถ้าต้องการให้เข้าถึงผ่าน http://localhost:5173 ได้ด้วย
+    allowedHosts: ['localhost', '.ngrok-free.app']
+  }
 })

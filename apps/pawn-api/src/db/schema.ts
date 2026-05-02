@@ -9,6 +9,7 @@ import {
   date,
   index,
   check,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -23,6 +24,10 @@ export const paymentStatusEnum = pgEnum('payment_status', [
   'confirmed',
   'rejected',
 ]);
+export const lineProfileStatusEnum = pgEnum('line_profile_status', [
+  'pending_customer',
+  'linked',
+]);
 
 export const customers = pgTable(
   'customers',
@@ -33,6 +38,7 @@ export const customers = pgTable(
       .notNull(),
     name: varchar('name', { length: 100 }).notNull(),
     phone: varchar('phone', { length: 20 }).notNull(),
+    phoneNormalized: varchar('phone_normalized', { length: 20 }).notNull(),
     lineUserId: varchar('line_user_id', { length: 100 }),
     totalPrice: decimal('total_price', { precision: 12, scale: 2 }).notNull(),
     downPayment: decimal('down_payment', { precision: 12, scale: 2 }).notNull(),
@@ -47,7 +53,9 @@ export const customers = pgTable(
   },
   (t) => [
     index('idx_customers_phone').on(t.phone),
+    index('idx_customers_phone_normalized').on(t.phoneNormalized),
     index('idx_customers_status').on(t.status),
+    index('idx_customers_line_user_id').on(t.lineUserId),
     check('remaining_balance_non_negative', sql`${t.remainingBalance} >= 0`),
   ],
 );
@@ -77,7 +85,27 @@ export const payments = pgTable(
   ],
 );
 
+export const lineUserProfiles = pgTable(
+  'line_user_profiles',
+  {
+    lineUserId: varchar('line_user_id', { length: 100 }).primaryKey(),
+    phoneNormalized: varchar('phone_normalized', { length: 20 }).notNull(),
+    name: varchar('name', { length: 100 }),
+    birthdate: date('birthdate'),
+    email: varchar('email', { length: 200 }),
+    lineDisplayName: varchar('line_display_name', { length: 200 }),
+    linePictureUrl: varchar('line_picture_url', { length: 500 }),
+    status: lineProfileStatusEnum('status').notNull().default('pending_customer'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_line_profiles_phone_normalized').on(t.phoneNormalized),
+  ],
+);
+
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+export type LineUserProfile = typeof lineUserProfiles.$inferSelect;

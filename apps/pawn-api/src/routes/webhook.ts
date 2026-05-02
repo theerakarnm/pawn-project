@@ -42,23 +42,91 @@ async function processEvents(events: WebhookEvent[]) {
 
     switch (event.postback.data) {
       case 'check_balance': {
-        const customer = await customerService.findByLineUserId(event.source.userId);
-        if (!customer) {
+        const allCustomers = await customerService.findAllByLineUserId(event.source.userId);
+
+        if (allCustomers.length === 0) {
           await lineClient.replyMessage({
             replyToken: event.replyToken,
             messages: [{ type: 'text', text: 'ไม่พบข้อมูลการผ่อน กรุณาติดต่อร้าน' }],
           });
           return;
         }
+
+        if (allCustomers.length === 1) {
+          const customer = allCustomers[0]!;
+          await lineClient.replyMessage({
+            replyToken: event.replyToken,
+            messages: [buildBalanceFlex({
+              installmentCode: customer.installmentCode,
+              remainingBalance: customer.remainingBalance,
+              totalInstallments: customer.totalInstallments,
+              paidInstallments: customer.paidInstallments,
+              dueDate: customer.dueDate,
+            })],
+          });
+          return;
+        }
+
+        const bubbles = allCustomers.map((c) => ({
+          type: 'bubble' as const,
+          header: {
+            type: 'box' as const,
+            layout: 'vertical' as const,
+            backgroundColor: '#1A73E8',
+            contents: [
+              {
+                type: 'text' as const,
+                text: c.installmentCode,
+                color: '#FFFFFF',
+                weight: 'bold' as const,
+                size: 'md' as const,
+              },
+            ],
+            paddingAll: '12px',
+          },
+          body: {
+            type: 'box' as const,
+            layout: 'vertical' as const,
+            spacing: 'sm' as const,
+            paddingAll: '12px',
+            contents: [
+              {
+                type: 'text' as const,
+                text: `฿${Number(c.remainingBalance).toLocaleString('th-TH')}`,
+                weight: 'bold' as const,
+                size: 'lg' as const,
+                color: '#E74C3C',
+              },
+              {
+                type: 'text' as const,
+                text: `เหลือ ${c.totalInstallments - c.paidInstallments} งวด`,
+                size: 'sm' as const,
+                color: '#555555',
+              },
+              ...(c.dueDate
+                ? [{
+                    type: 'text' as const,
+                    text: `ครบกำหนด: ${c.dueDate}`,
+                    size: 'xs' as const,
+                    color: '#888888',
+                  }]
+                : []),
+            ],
+          },
+        }));
+
         await lineClient.replyMessage({
           replyToken: event.replyToken,
-          messages: [buildBalanceFlex({
-            installmentCode: customer.installmentCode,
-            remainingBalance: customer.remainingBalance,
-            totalInstallments: customer.totalInstallments,
-            paidInstallments: customer.paidInstallments,
-            dueDate: customer.dueDate,
-          })],
+          messages: [
+            {
+              type: 'flex',
+              altText: `มี ${allCustomers.length} รายการผ่อน`,
+              contents: {
+                type: 'carousel',
+                contents: bubbles,
+              },
+            },
+          ],
         });
         break;
       }

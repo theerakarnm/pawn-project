@@ -1,6 +1,7 @@
 import { db } from './index.ts';
 import { customers, payments } from './schema.ts';
 import { sql } from 'drizzle-orm';
+import { normalizePhone } from '../services/liff.service.ts';
 
 const CUSTOMER_SEEDS = [
   { installmentCode: 'P001', name: 'สมชาย ใจดี', phone: '0812345678', totalPrice: '30000', downPayment: '5000', monthlyPayment: '2500', totalInstallments: 10, paidInstallments: 3, remainingBalance: '17500', status: 'active' as const, dueDate: '2026-06-01' },
@@ -32,7 +33,9 @@ async function seed() {
     return;
   }
 
-  const insertedCustomers = await db.insert(customers).values(CUSTOMER_SEEDS).returning({ id: customers.id });
+  const insertedCustomers = await db.insert(customers).values(
+    CUSTOMER_SEEDS.map((s) => ({ ...s, phoneNormalized: normalizePhone(s.phone) })),
+  ).returning({ id: customers.id });
   if (insertedCustomers.length < CUSTOMER_SEEDS.length) throw new Error('INSERT_FAILED');
 
   const cid = (i: number) => {
