@@ -1,6 +1,6 @@
 import { db } from '../db/index.ts';
 import { customers, payments } from '../db/schema.ts';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, ilike, or } from 'drizzle-orm';
 import { uploadSlip } from '../lib/r2.ts';
 import { lineClient } from '../lib/line.ts';
 import { buildPaymentConfirmFlex } from '../lib/line.ts';
@@ -18,24 +18,29 @@ export interface PaymentQueueItem {
 }
 
 export async function submitPayment(data: {
-  customerId?: string;
+  installmentCode?: string;
   phone?: string;
   amount: string;
   slipBuffer: Uint8Array;
   lineUserId?: string;
 }) {
   let customer;
-  if (data.customerId) {
+  if (data.installmentCode) {
+    const normalized = data.installmentCode.trim().toLowerCase();
     const result = await db
       .select()
       .from(customers)
-      .where(eq(customers.id, data.customerId));
+      .where(ilike(customers.installmentCode, normalized));
     customer = result.at(0);
   } else if (data.phone) {
+    const normalizedPhone = data.phone.replace(/[-\s]/g, '');
     const result = await db
       .select()
       .from(customers)
-      .where(eq(customers.phone, data.phone));
+      .where(or(
+        eq(customers.phone, data.phone),
+        eq(customers.phone, normalizedPhone),
+      ));
     customer = result.at(0);
   }
   if (!customer) throw new Error('NOT_FOUND');

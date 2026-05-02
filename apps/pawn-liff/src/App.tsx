@@ -3,6 +3,7 @@ import { useLiff } from './hooks/useLiff.ts';
 import { PaymentForm } from './components/PaymentForm.tsx';
 import { SuccessScreen } from './components/SuccessScreen.tsx';
 import { BalanceScreen } from './components/BalanceScreen.tsx';
+import { ErrorScreen } from './components/ErrorScreen.tsx';
 
 type Screen = 'form' | 'success' | 'balance';
 
@@ -41,13 +42,7 @@ export function App() {
     }
   }, [liffReady, lineUserId, fetchBalance]);
 
-  if (error) {
-    return (
-      <div className="mx-auto flex max-w-md items-center justify-center p-6">
-        <p className="text-center text-sm text-destructive">{error}</p>
-      </div>
-    );
-  }
+  if (error) return <ErrorScreen message={error} />;
 
   if (!liffReady) {
     return (

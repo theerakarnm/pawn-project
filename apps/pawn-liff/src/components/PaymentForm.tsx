@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/heic'];
+
 const schema = z.object({
   lookupType: z.enum(['installmentCode', 'phone']),
   lookupValue: z.string().min(1, 'กรุณากรอกข้อมูล'),
@@ -10,10 +12,10 @@ const schema = z.object({
     (v) => Number(v) > 0,
     'ยอดชำระต้องมากกว่า 0',
   ),
-  slip: z.instanceof(File).refine(
-    (f) => f.size <= 5 * 1024 * 1024,
-    'ไฟล์ต้องไม่เกิน 5MB',
-  ),
+  slip: z.instanceof(FileList)
+    .refine((f) => f.length > 0, 'กรุณาแนบสลิปการโอนเงิน')
+    .refine((f) => f[0]?.size <= 5 * 1024 * 1024, 'ไฟล์ต้องไม่เกิน 5MB')
+    .refine((f) => ACCEPTED_TYPES.includes(f[0]?.type), 'รองรับเฉพาะ jpg, png, heic'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -33,9 +35,10 @@ export function PaymentForm({ lineUserId, onSuccess }: PaymentFormProps) {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onChange',
     defaultValues: { lookupType: 'installmentCode', lookupValue: '', amount: '' },
   });
 
@@ -45,12 +48,12 @@ export function PaymentForm({ lineUserId, onSuccess }: PaymentFormProps) {
     setSubmitError(null);
     const formData = new FormData();
     if (data.lookupType === 'installmentCode') {
-      formData.append('customerId', data.lookupValue);
+      formData.append('installmentCode', data.lookupValue);
     } else {
       formData.append('phone', data.lookupValue);
     }
     formData.append('amount', data.amount);
-    formData.append('slip', data.slip);
+    formData.append('slip', data.slip[0]);
     formData.append('lineUserId', lineUserId);
 
     try {
@@ -119,7 +122,7 @@ export function PaymentForm({ lineUserId, onSuccess }: PaymentFormProps) {
         <div>
           <input
             type="file"
-            accept="image/jpeg,image/png"
+            accept="image/jpeg,image/png,image/heic"
             {...register('slip')}
             className="w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:text-primary-foreground"
           />
@@ -134,7 +137,7 @@ export function PaymentForm({ lineUserId, onSuccess }: PaymentFormProps) {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !isValid}
           className="w-full rounded bg-[#00B900] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           {isSubmitting ? 'กำลังส่ง...' : 'แจ้งชำระเงิน'}

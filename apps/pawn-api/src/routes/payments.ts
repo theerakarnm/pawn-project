@@ -16,14 +16,14 @@ const rejectSchema = z.object({
 paymentsRoute.post('/', async (c) => {
   const formData = await c.req.formData();
 
-  const customerId = formData.get('customerId') as string | null;
+  const installmentCode = formData.get('installmentCode') as string | null;
   const phone = formData.get('phone') as string | null;
   const amount = formData.get('amount') as string | null;
   const lineUserId = formData.get('lineUserId') as string | null;
   const file = formData.get('slip') as File | null;
 
-  if (!customerId && !phone) {
-    return c.json({ error: 'customerId or phone is required' }, 400);
+  if (!installmentCode && !phone) {
+    return c.json({ error: 'installmentCode or phone is required' }, 400);
   }
   if (!amount || Number(amount) <= 0) {
     return c.json({ error: 'amount must be positive' }, 400);
@@ -39,7 +39,7 @@ paymentsRoute.post('/', async (c) => {
 
   try {
     const result = await paymentService.submitPayment({
-      customerId: customerId ?? undefined,
+      installmentCode: installmentCode ?? undefined,
       phone: phone ?? undefined,
       amount,
       slipBuffer: buffer,

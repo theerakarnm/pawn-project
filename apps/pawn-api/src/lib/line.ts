@@ -82,3 +82,72 @@ export function buildPaymentConfirmFlex({
     ],
   };
 }
+
+export function buildBalanceFlex(customer: {
+  installmentCode: string;
+  remainingBalance: string;
+  totalInstallments: number;
+  paidInstallments: number;
+  dueDate: string | null;
+}): messagingApi.Message {
+  const remaining = customer.totalInstallments - customer.paidInstallments;
+  const bodyContents: messagingApi.FlexComponent[] = [
+    {
+      type: 'text',
+      text: `฿${Number(customer.remainingBalance).toLocaleString('th-TH')}`,
+      size: 'xxl',
+      weight: 'bold',
+      align: 'center',
+      color: '#1A73E8',
+    },
+    {
+      type: 'separator',
+    },
+    {
+      type: 'text',
+      text: `เหลืออีก ${remaining} งวด`,
+      align: 'center',
+      color: '#555555',
+    },
+  ];
+
+  if (customer.dueDate) {
+    bodyContents.push({
+      type: 'text',
+      text: `กำหนดชำระ: ${customer.dueDate}`,
+      align: 'center',
+      color: '#888888',
+      size: 'sm',
+    });
+  }
+
+  return {
+    type: 'flex',
+    altText: `ยอดคงเหลือ ฿${customer.remainingBalance}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#1A73E8',
+        contents: [
+          {
+            type: 'text',
+            text: '💰 ยอดคงเหลือ',
+            color: '#FFFFFF',
+            weight: 'bold',
+            size: 'lg',
+          },
+        ],
+        paddingAll: '20px',
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        paddingAll: '20px',
+        contents: bodyContents,
+      },
+    },
+  };
+}
